@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The GitHub Graveyard 🪦</title>
+    <style>
+        body {
+            background-color: #121214;
+            color: #e1e1e6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        form {
+            background: #202024;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            text-align: left;
+        }
+        label { display: block; margin-top: 10px; color: #a8a8b3; }
+        input, textarea {
+            width: 100%; padding: 8px; margin-top: 5px;
+            background: #121214; border: 1px solid #29292e;
+            color: white; border-radius: 4px; box-sizing: border-box;
+        }
+        button {
+            background: #4d4d57; color: white; border: none;
+            padding: 10px 15px; margin-top: 15px; border-radius: 4px;
+            cursor: pointer; font-weight: bold; width: 100%;
+        }
+        button:hover { background: #8257e5; }
+        .cimetiere {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px; margin-top: 20px;
+        }
+        .tombe {
+            background: #202024; border: 2px solid #323238;
+            border-radius: 8px 8px 0 0; padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .tombe h3 { margin: 0 0 10px 0; color: #8257e5; }
+    </style>
+</head>
+<body>
+
+    <h1>🪦 The GitHub Graveyard</h1>
+    <p>Enterrez vos projets abandonnés pour toujours.</p>
+
+    <div class="container">
+        <!-- Formulaire de création -->
+        <form id="graveForm">
+            <h3>Créer une Tombe numérique</h3>
+            
+            <label for="pseudo">Votre Pseudo GitHub :</label>
+            <input type="text" id="pseudo" required placeholder="Ex: Octocat">
+
+            <label for="projet">Nom du Projet Mort :</label>
+            <input type="text" id="projet" required placeholder="Ex: MonSuperProjet">
+
+            <label for="cause">Cause du décès :</label>
+            <textarea id="cause" required placeholder="Ex: Manque de temps, flemme intense..."></textarea>
+
+            <label for="langage">Langage principal utilisé :</label>
+            <input type="text" id="langage" required placeholder="Ex: JavaScript, Python">
+
+            <button type="submit">Générer la tombe et publier sur GitHub</button>
+        </form>
+
+        <hr style="border: 1px solid #29292e; margin: 40px 0;">
+
+        <h2>Le Mémorial</h2>
+        <div class="cimetiere" id="cimetiere">
+            <!-- Les tombes s'afficheront ici -->
+        </div>
+    </div>
+
+    <script>
+        // METS ICI TES INFOS GITHUB
+        const GITHUB_USER = "Bowser245"; 
+        const GITHUB_REPO = "gh-graveyard"; 
+
+        // 1. Gestion de la création via le site
+        document.getElementById('graveForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const pseudo = document.getElementById('pseudo').value.trim();
+            const projet = document.getElementById('projet').value.trim();
+            const cause = document.getElementById('cause').value.trim();
+            const langage = document.getElementById('langage').value.trim();
+
+            // Création de l'objet JSON
+            const data = {
+                nom_projet: projet,
+                createur: pseudo,
+                langage: langage,
+                cause_deces: cause,
+                date_enterrement: new Date().toLocaleDateString('fr-FR')
+            };
+
+            // Formatage propre du JSON en texte textuel
+            const jsonContenu = JSON.stringify(data, null, 2);
+            
+            // Nom de fichier unique basé sur le projet et le pseudo
+            const nomFichier = `${pseudo}-${projet}.json`.toLowerCase().replace(/[^a-z0-9.-]/g, '_');
+
+            // URL magique de GitHub pour ouvrir une PR automatique avec le fichier pré-rempli
+            const urlGitHubPR = `https://github.com/${GITHUB_USER}/${GITHUB_REPO}/new/main/tombes?filename=${nomFichier}&value=${encodeURIComponent(jsonContenu)}`;
+
+            // On envoie l'utilisateur sur GitHub pour valider la PR
+            window.open(urlGitHubPR, '_blank');
+        });
+
+        // 2. Chargement automatique des tombes existantes
+        async function chargerTombes() {
+            const container = document.getElementById('cimetiere');
+            try {
+                // On appelle l'API GitHub pour lister les fichiers du dossier "tombes"
+                const reponse = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/tombes`);
+                if (!reponse.ok) return;
+                const fichiers = await reponse.json();
+
+                for (let fichier of fichiers) {
+                    if (fichier.name.endsWith('.json')) {
+                        // On télécharge le contenu de chaque fichier JSON
+                        const resContenu = await fetch(fichier.download_url);
+                        const tombeData = await resContenu.json();
+
+                        // On crée la carte HTML de la tombe
+                        const div = document.createElement('div');
+                        div.className = 'tombe';
+                        div.innerHTML = `
+                            <h3>${tombeData.nom_projet}</h3>
+                            <p><small>Par ${tombeData.createur}</small></p>
+                            <p><strong>Mort à cause de :</strong> ${tombeData.cause_deces}</p>
+                            <p><small>Code : ${tombeData.langage}</small></p>
+                        `;
+                        container.appendChild(div);
+                    }
+                }
+            } catch (error) {
+                console.log("Erreur lors du chargement des tombes");
+            }
+        }
+
+        // Lancement au chargement de la page
+        chargerTombes();
+    </script>
+</body>
+</html>
